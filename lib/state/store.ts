@@ -11,19 +11,32 @@ export type Agent = (typeof seedAgents)[number];
 
 export type SkillNode = (typeof seedSkills)["marketing"][number];
 
+export type MissionCompletionEvent = {
+  id: string;
+  missionId: string;
+  agentId: string;
+  missionTitle: string;
+  rewardXp: number;
+  rewardResources: Mission["rewardResources"];
+  leveledUp: boolean;
+  newLevel: number;
+};
+
 type StoreState = {
   agents: Agent[];
   missions: Mission[];
   resources: ResourceState;
   skills: typeof seedSkills;
   levelUpToast: { agentId: string; level: number } | null;
+  lastCompletion: MissionCompletionEvent | null;
   addMission: (mission: Mission) => void;
   updateMission: (missionId: string, updates: Partial<Mission>) => void;
-  completeMission: (missionId: string) => void;
+  completeMission: (missionId: string) => MissionCompletionEvent | null;
   spendResources: (updates: Partial<ResourceState>) => void;
-  levelUpAgent: (agentId: string, xpGain: number) => void;
+  levelUpAgent: (agentId: string, xpGain: number) => { leveledUp: boolean; newLevel: number };
   clearLevelUpToast: () => void;
-  upgradeBuilding: (agentId: string) => void;
+  clearLastCompletion: () => void;
+  upgradeBuilding: (agentId: string) => boolean;
 };
 
 const XP_SCALE = 100;
@@ -31,12 +44,18 @@ const XP_EXPONENT = 1.2;
 
 const xpNeeded = (level: number) => Math.floor(XP_SCALE * Math.pow(level, XP_EXPONENT));
 
+const makeId = () =>
+  typeof crypto !== "undefined" && "randomUUID" in crypto
+    ? crypto.randomUUID()
+    : Math.random().toString(36).slice(2);
+
 export const useStore = create<StoreState>((set, get) => ({
   agents: seedAgents,
   missions: seedMissions,
   resources: seedResources,
   skills: seedSkills,
   levelUpToast: null,
+  lastCompletion: null,
   addMission: (mission) =>
     set((state) => ({ missions: [mission, ...state.missions] })),
   updateMission: (missionId, updates) =>
@@ -47,7 +66,7 @@ export const useStore = create<StoreState>((set, get) => ({
     })),
   completeMission: (missionId) => {
     const mission = get().missions.find((item) => item.id === missionId);
-    if (!mission || mission.status === "Completed") return;
+    if (!mission || mission.status === "Completed") return null;
 
     set((state) => ({
       missions: state.missions.map((item) =>
@@ -61,7 +80,19 @@ export const useStore = create<StoreState>((set, get) => ({
       }
     }));
 
-    get().levelUpAgent(mission.agentId, mission.rewardXp);
+    const levelUp = get().levelUpAgent(mission.agentId, mission.rewardXp);
+    const event: MissionCompletionEvent = {
+      id: makeId(),
+      missionId,
+      agentId: mission.agentId,
+      missionTitle: mission.title,
+      rewardXp: mission.rewardXp,
+      rewardResources: mission.rewardResources,
+      leveledUp: levelUp.leveledUp,
+      newLevel: levelUp.newLevel
+    };
+    set({ lastCompletion: event });
+    return event;
   },
   spendResources: (updates) =>
     set((state) => ({
@@ -72,48 +103,57 @@ export const useStore = create<StoreState>((set, get) => ({
         reputation: state.resources.reputation - (updates.reputation ?? 0)
       }
     })),
-  levelUpAgent: (agentId, xpGain) =>
+  levelUpAgent: (agentId, xpGain) => {
+    let leveledUp = false;
+    let newLevel = 0;
     set((state) => {
       let toast: { agentId: string; level: number } | null = null;
       const nextAgents = state.agents.map((agent) => {
         if (agent.id !== agentId) return agent;
+        newLevel = agent.level;
         const nextXp = agent.xp + xpGain;
         const required = xpNeeded(agent.level);
         if (nextXp >= required) {
           toast = { agentId, level: agent.level + 1 };
+          leveledUp = true;
+          newLevel = agent.level + 1;
           return {
             ...agent,
             xp: nextXp - required,
             level: agent.level + 1,
             skillPoints: agent.skillPoints + 1,
-            status: "Idle"
+            status: "Idle" as const
           };
         }
         return { ...agent, xp: nextXp };
       });
       return { agents: nextAgents, levelUpToast: toast ?? state.levelUpToast };
-    }),
+    });
+    return { leveledUp, newLevel };
+  },
   clearLevelUpToast: () => set({ levelUpToast: null }),
-  upgradeBuilding: (agentId) =>
-    set((state) => {
-      const costCoins = 50;
-      const costFocus = 6;
-      if (state.resources.coins < costCoins || state.resources.focus < costFocus) {
-        return state;
-      }
-      return {
-        resources: {
-          ...state.resources,
-          coins: state.resources.coins - costCoins,
-          focus: state.resources.focus - costFocus
-        },
-        agents: state.agents.map((agent) =>
-          agent.id === agentId
-            ? { ...agent, buildingLevel: Math.min(agent.buildingLevel + 1, 10) }
-            : agent
-        )
-      };
-    })
+  clearLastCompletion: () => set({ lastCompletion: null }),
+  upgradeBuilding: (agentId) => {
+    const state = get();
+    const costCoins = 50;
+    const costFocus = 6;
+    if (state.resources.coins < costCoins || state.resources.focus < costFocus) {
+      return false;
+    }
+    set((prev) => ({
+      resources: {
+        ...prev.resources,
+        coins: prev.resources.coins - costCoins,
+        focus: prev.resources.focus - costFocus
+      },
+      agents: prev.agents.map((agent) =>
+        agent.id === agentId
+          ? { ...agent, buildingLevel: Math.min(agent.buildingLevel + 1, 10) }
+          : agent
+      )
+    }));
+    return true;
+  }
 }));
 
 export { xpNeeded };

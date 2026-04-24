@@ -4,11 +4,40 @@
 
 :root {
   color-scheme: dark;
+  --color-background: #0b0f1a;
+  --color-foreground: #e7ecf5;
+  --color-primary: #7c8cff;
+  --color-secondary: #19c37d;
+  --color-accent: #fbbf24;
+  --color-card: #121829;
+  --color-muted: #94a3b8;
+}
+
+html[data-theme="modern-kingdom"] {
+  --color-background: #10131c;
+  --color-foreground: #f3efe3;
+  --color-primary: #e4b063;
+  --color-secondary: #6c9a8b;
+  --color-accent: #d97757;
+  --color-card: #1b2030;
+  --color-muted: #a7a390;
+}
+
+html[data-theme="aurora"] {
+  --color-background: #061528;
+  --color-foreground: #eaf6ff;
+  --color-primary: #4fd1c5;
+  --color-secondary: #a78bfa;
+  --color-accent: #f472b6;
+  --color-card: #0f2238;
+  --color-muted: #8fa8c2;
 }
 
 body {
-  @apply bg-background text-foreground;
+  background: var(--color-background);
+  color: var(--color-foreground);
   font-family: "Inter", system-ui, sans-serif;
+  transition: background-color 0.35s ease, color 0.35s ease;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -18,4 +47,72 @@ body {
 .scrollbar-hide {
   -ms-overflow-style: none;
   scrollbar-width: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html[data-reduced-motion="true"] *,
+  html[data-reduced-motion="true"] *::before,
+  html[data-reduced-motion="true"] *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+@keyframes floatUp {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.8);
+  }
+  15% {
+    opacity: 1;
+    transform: translateY(-4px) scale(1.05);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(-60px) scale(1);
+  }
+}
+
+.animate-float-up {
+  animation: floatUp 1.6s ease-out forwards;
+}
+
+@keyframes levelBloom {
+  0% {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  40% {
+    opacity: 1;
+    transform: scale(1.2);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(2.4);
+  }
+}
+
+.animate-bloom {
+  animation: levelBloom 1.4s ease-out forwards;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.05) 0%,
+    rgba(255, 255, 255, 0.12) 50%,
+    rgba(255, 255, 255, 0.05) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s linear infinite;
 }

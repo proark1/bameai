@@ -1,9 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useStore } from "@/lib/state/store";
+import { toast } from "@/lib/state/toastStore";
+import { playSound } from "@/lib/fx/sound";
+import { vibrate } from "@/lib/fx/haptics";
 
 type MissionProposal = {
   title: string;
@@ -52,10 +55,17 @@ export function MissionPanel({ agentId, proposal }: MissionPanelProps) {
       }
     });
     setAccepted(true);
+    toast({
+      tone: "success",
+      title: "Mission accepted",
+      description: proposal.title
+    });
+    playSound("accept");
+    vibrate("medium");
   };
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-card p-6">
+    <div className="rounded-3xl border border-white/10 bg-card p-5 sm:p-6">
       <div className="flex items-center justify-between">
         <div>
           <p className="text-xs uppercase tracking-[0.3em] text-muted">Mission</p>
@@ -82,9 +92,9 @@ export function MissionPanel({ agentId, proposal }: MissionPanelProps) {
             <p className="text-xs text-muted">Steps</p>
             <ul className="mt-2 space-y-2">
               {proposal.steps.map((step) => (
-                <li key={step} className="flex items-center gap-2">
-                  <span className="h-2 w-2 rounded-full bg-primary"></span>
-                  {step}
+                <li key={step} className="flex items-start gap-2">
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <span>{step}</span>
                 </li>
               ))}
             </ul>
@@ -95,22 +105,36 @@ export function MissionPanel({ agentId, proposal }: MissionPanelProps) {
               <p>{proposal.eta}</p>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-background p-4 text-xs">
-            <div>XP: {proposal.rewards.xp}</div>
-            <div>Coins: {proposal.rewards.coins}</div>
-            <div>Focus: {proposal.rewards.focus}</div>
-            <div>Intel: {proposal.rewards.intel}</div>
-            <div>Reputation: {proposal.rewards.reputation}</div>
+          <div className="grid grid-cols-2 gap-3 rounded-2xl border border-white/10 bg-background p-4 text-xs sm:grid-cols-5">
+            <RewardCell label="XP" value={proposal.rewards.xp} />
+            <RewardCell label="Coins" value={proposal.rewards.coins} />
+            <RewardCell label="Focus" value={proposal.rewards.focus} />
+            <RewardCell label="Intel" value={proposal.rewards.intel} />
+            <RewardCell label="Rep" value={proposal.rewards.reputation} />
           </div>
-          <Button onClick={handleAccept} disabled={accepted}>
+          <Button onClick={handleAccept} disabled={accepted} className="w-full">
             {accepted ? "Mission Accepted" : "Accept Mission"}
           </Button>
         </div>
       ) : (
-        <p className="mt-4 text-sm text-muted">
-          No mission proposal yet. Ask the agent to craft a mission.
-        </p>
+        <div className="mt-4 flex flex-col items-center gap-2 rounded-2xl border border-dashed border-white/10 bg-background/50 p-6 text-center">
+          <MessageSquare className="h-6 w-6 text-primary/70" />
+          <p className="text-sm text-muted">
+            No mission proposal yet. Ask the agent to craft one in the chat.
+          </p>
+        </div>
       )}
+    </div>
+  );
+}
+
+function RewardCell({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="flex flex-col">
+      <span className="text-[10px] uppercase tracking-[0.25em] text-muted">
+        {label}
+      </span>
+      <span className="text-sm font-semibold text-foreground">+{value}</span>
     </div>
   );
 }
