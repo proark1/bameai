@@ -12,7 +12,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!email.includes("@")) {
+    if (!/^\S+@\S+\.\S+$/.test(email)) {
       setStatus("Enter a valid email first.");
       toast({ tone: "error", title: "Enter a valid email" });
       return;

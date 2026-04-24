@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import { Bolt, Flame, Shield, Star, Trophy } from "lucide-react";
 import { useMetaStore } from "@/lib/state/metaStore";
 import { useStore, xpNeeded } from "@/lib/state/store";
@@ -21,14 +22,23 @@ export default function LeaderboardPage() {
   const totalXp = useMetaStore((state) => state.totalXpEarned);
   const achievements = useMetaStore((state) => state.achievements);
 
-  const ranked = [...agents].sort((a, b) => {
-    if (b.level !== a.level) return b.level - a.level;
-    return b.xp - a.xp;
-  });
+  const ranked = useMemo(
+    () =>
+      [...agents].sort((a, b) => {
+        if (b.level !== a.level) return b.level - a.level;
+        return b.xp - a.xp;
+      }),
+    [agents]
+  );
 
-  const completedByAgent = (agentId: string) =>
-    missions.filter((m) => m.agentId === agentId && m.status === "Completed")
-      .length;
+  const completedCounts = useMemo(() => {
+    return missions.reduce<Record<string, number>>((acc, mission) => {
+      if (mission.status === "Completed") {
+        acc[mission.agentId] = (acc[mission.agentId] ?? 0) + 1;
+      }
+      return acc;
+    }, {});
+  }, [missions]);
 
   const unlockedCount = achievements.filter((a) => a.unlockedAt).length;
 
@@ -94,7 +104,7 @@ export default function LeaderboardPage() {
                 <p className="text-sm font-semibold text-foreground">
                   Lv {agent.level}
                 </p>
-                <p>{completedByAgent(agent.id)} completed</p>
+                <p>{completedCounts[agent.id] ?? 0} completed</p>
               </div>
             </li>
           ))}
@@ -136,7 +146,10 @@ export default function LeaderboardPage() {
                   </p>
                   <p className="text-xs text-muted">{achievement.description}</p>
                   {unlocked && achievement.unlockedAt && (
-                    <p className="mt-1 text-[10px] uppercase tracking-[0.25em] text-primary">
+                    <p
+                      className="mt-1 text-[10px] uppercase tracking-[0.25em] text-primary"
+                      suppressHydrationWarning
+                    >
                       Unlocked {new Date(achievement.unlockedAt).toLocaleDateString()}
                     </p>
                   )}

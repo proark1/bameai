@@ -25,7 +25,9 @@ const todayKey = () => new Date().toISOString().slice(0, 10);
 const dayDiff = (a: string, b: string) => {
   const da = new Date(a);
   const db = new Date(b);
-  return Math.round((db.getTime() - da.getTime()) / (1000 * 60 * 60 * 24));
+  const daUTC = Date.UTC(da.getFullYear(), da.getMonth(), da.getDate());
+  const dbUTC = Date.UTC(db.getFullYear(), db.getMonth(), db.getDate());
+  return Math.floor((dbUTC - daUTC) / (1000 * 60 * 60 * 24));
 };
 
 const defaultAchievements: Achievement[] = [

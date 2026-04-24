@@ -29,9 +29,9 @@ export function Providers({ children }: { children: React.ReactNode }) {
 
   // Watch for newly unlocked achievements and surface them as toasts.
   useEffect(() => {
-    const unsub = useMetaStore.subscribe((state, prev) => {
-      if (state.pendingUnlocks.length <= prev.pendingUnlocks.length) return;
-      const newOnes = state.pendingUnlocks.slice(prev.pendingUnlocks.length);
+    const unsub = useMetaStore.subscribe((state) => {
+      const newOnes = state.pendingUnlocks;
+      if (newOnes.length === 0) return;
       newOnes.forEach((achievement) => {
         useToastStore.getState().push({
           tone: "reward",
@@ -39,10 +39,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
           description: achievement.description
         });
       });
-      if (newOnes.length) {
-        playSound("unlock");
-        vibrate("success");
-      }
+      playSound("unlock");
+      vibrate("success");
       useMetaStore.getState().clearPendingUnlocks();
     });
     return () => unsub();
